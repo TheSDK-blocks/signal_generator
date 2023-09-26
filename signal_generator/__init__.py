@@ -29,7 +29,7 @@ class signal_generator(thesdk):
     IOS.Members['out'].Data: np.array
         Generated signal of shape (nsamp+extra_sampl,2), where column 0 is a
         time-vector and column 1 is the signal vector. 
-    sigtype: str, 'sine','pulse' or 'bpnoise'
+    sigtype: str, 'sine', 'sampled_sine', 'sawtooth', 'ramp' ,'pulse' or 'bpnoise'
         Signal type, either sine wave, pulse waveform or band-limited noise.
     sig_freq: float
         Signal frequency (sine, pulse).
@@ -61,9 +61,9 @@ class signal_generator(thesdk):
         The standard deviation of jitter signal to be added to 'pulse' type
         rising and falling edges. By default, no jitter is added. 
     high: float, default 1
-        High signal level (pulse).
+        High signal level (pulse, ramp).
     low: float, default 0
-        Low signal level (pulse).
+        Low signal level (pulse, ramp).
     after: float, default 0
         Time-domain delay (sine,pulse).
     duty: float, default 0.5
@@ -217,6 +217,13 @@ class signal_generator(thesdk):
             sig *= self.sig_amp
             sig += self.sig_cm
             outmat[:,0] = tvec+self.after
+            outmat[:,1] = sig
+        elif self.sigtype == 'ramp':
+            nsamp = self.nsamp+self.extra_sampl
+            tvec = np.linspace(0,nsamp/self.fs,num=nsamp*self.sig_osr, endpoint=False)
+            sig = self.sig_amp*np.linspace(self.low, self.high, num=nsamp*self.sig_osr) + self.sig_cm
+            outmat = np.zeros((nsamp*self.sig_osr, 2))
+            outmat[:,0] = tvec
             outmat[:,1] = sig
         else:
             self.print_log(type='F',msg='Signal type \'%s\' not supported.' % self.sigtype)
