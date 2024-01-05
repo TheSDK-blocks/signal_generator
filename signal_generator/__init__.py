@@ -211,14 +211,14 @@ class signal_generator(thesdk):
                 outmat = np.vstack([(0,self.low),outmat])
 
         elif self.sigtype == 'prbs':
-            # Generating Pseudorandom Binary Sequence
-            start = 0x02
+            # Generating Pseudorandom Binary Sequence (PRBS7)
+            start = 0b1010101
             a = start
             prbs_seq = []
             while True:
                 b = (((a >> 6) ^ (a >> 5)) & 1)
                 a = ((a << 1) | b) & 0x7f
-                bits = [(a >> j) & 1 for j in range(7,-1,-1)]
+                bits = [(a >> j) & 1 for j in range(6,-1,-1)]
                 prbs_seq.extend(bits)
                 if start == a:
                     break
@@ -230,28 +230,20 @@ class signal_generator(thesdk):
                 diff = bit - lastBit
                 if bit == 1 and diff == 0:
                     timestamp = outmat[-1][0] + self.duty/self.sig_freq
-                    timestamp2 = timestamp + self.duty/self.sig_freq
                     outmat = np.vstack((outmat,[timestamp, self.high]))
-                    outmat = np.vstack((outmat,[timestamp2, self.high]))
                 elif bit == 0 and diff == 0:
                     timestamp = outmat[-1][0] + self.duty/self.sig_freq
-                    timestamp2 = timestamp + self.duty/self.sig_freq
                     outmat = np.vstack((outmat,[timestamp, self.low]))
-                    outmat = np.vstack((outmat,[timestamp2, self.low]))
                 elif bit == 1 and diff == 1:
-                    timestamp = outmat[-1][0] + self.duty/self.sig_freq
-                    timestamp2 = timestamp + self.trise
-                    timestamp3 = timestamp2 + self.duty/self.sig_freq-self.trise
-                    outmat = np.vstack((outmat,[timestamp, self.low]))
-                    outmat = np.vstack((outmat,[timestamp2, self.high]))
-                    outmat = np.vstack((outmat,[timestamp3, self.high]))
+                    timestamp = outmat[-1][0] + self.trise
+                    timestamp2 = timestamp + self.duty/self.sig_freq-self.trise
+                    outmat = np.vstack((outmat, [timestamp, self.high]))
+                    outmat = np.vstack((outmat, [timestamp2, self.high]))
                 elif bit == 0 and diff == -1:
-                    timestamp = outmat[-1][0] + self.duty/self.sig_freq
-                    timestamp2 = timestamp + self.tfall
-                    timestamp3 = timestamp2 + self.duty/self.sig_freq-self.tfall
-                    outmat = np.vstack((outmat,[timestamp, self.high]))
-                    outmat = np.vstack((outmat,[timestamp2, self.low]))
-                    outmat = np.vstack((outmat,[timestamp3, self.low]))
+                    timestamp = outmat[-1][0] + self.tfall
+                    timestamp2 = timestamp + self.duty/self.sig_freq-self.tfall
+                    outmat = np.vstack((outmat, [timestamp, self.low]))
+                    outmat = np.vstack((outmat, [timestamp2, self.low]))
                 lastBit = bit
 
         elif self.sigtype == 'pulse_nonoverlap':
