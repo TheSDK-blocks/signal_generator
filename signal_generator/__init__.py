@@ -29,7 +29,7 @@ class signal_generator(thesdk):
     IOS.Members['out'].Data: np.array
         Generated signal of shape (nsamp+extra_sampl,2), where column 0 is a
         time-vector and column 1 is the signal vector. 
-    sigtype: str, 'sine', 'sampled_sine', 'sawtooth', 'ramp' ,'pulse', 'pulse_nonoverlap' or 'bpnoise'
+    sigtype: str, 'sine', 'sampled_sine', 'sawtooth', 'ramp' ,'pulse', 'pulse_nonoverlap', 'prbs' or 'bpnoise'
         Signal type, either sine wave, pulse waveform or band-limited noise.
     sig_freq: float
         Signal frequency (sine, pulse).
@@ -210,7 +210,7 @@ class signal_generator(thesdk):
             if not self.after==0:
                 outmat = np.vstack([(0,self.low),outmat])
 
-        elif self.sigtype == 'prbs':
+        elif self.sigtype == 'prbs': # Works with attributes used for pulse; trise, tfall, sig_freq, jitter_sd
             # Generating Pseudorandom Binary Sequence (PRBS7)
             start = 0b1010101
             a = start
@@ -222,29 +222,39 @@ class signal_generator(thesdk):
                 prbs_seq.extend(bits)
                 if start == a:
                     break
+            # Jitter
+            if self.jitter_sd:
+                self.print_log(type='I', msg='Applying jitter with SD of %.3g to the output signal!' % self.jitter_sd)
+                jitter = np.random.normal(0,self.jitter_sd, 2*(self.nsamp+self.extra_sampl))
+                if jitter[0] < 0 and abs(jitter[0] > self.after):
+                    self.print_log(type='W', msg='First jitter sample makes first timestamp of the signal negative!')
+            else:
+                jitter = np.zeros(2*(self.nsamp+self.extra_sampl))
+            
             # Making a pulse according to PRBS
             lastBit = 0
             i = 0
-            outmat = np.array([[self.low, 0]])
+            outmat = np.array([[0, self.low]])
             for bit in prbs_seq:
                 diff = bit - lastBit
                 if bit == 1 and diff == 0:
-                    timestamp = outmat[-1][0] + self.duty/self.sig_freq
+                    timestamp = outmat[-1][0] + self.duty/self.sig_freq + jitter[i]
                     outmat = np.vstack((outmat,[timestamp, self.high]))
                 elif bit == 0 and diff == 0:
-                    timestamp = outmat[-1][0] + self.duty/self.sig_freq
+                    timestamp = outmat[-1][0] + self.duty/self.sig_freq + jitter[i]
                     outmat = np.vstack((outmat,[timestamp, self.low]))
                 elif bit == 1 and diff == 1:
-                    timestamp = outmat[-1][0] + self.trise
-                    timestamp2 = timestamp + self.duty/self.sig_freq-self.trise
+                    timestamp = outmat[-1][0] + self.trise  + jitter[i]
+                    timestamp2 = timestamp + self.duty/self.sig_freq-self.trise 
                     outmat = np.vstack((outmat, [timestamp, self.high]))
                     outmat = np.vstack((outmat, [timestamp2, self.high]))
                 elif bit == 0 and diff == -1:
-                    timestamp = outmat[-1][0] + self.tfall
+                    timestamp = outmat[-1][0] + self.tfall  + jitter[i]
                     timestamp2 = timestamp + self.duty/self.sig_freq-self.tfall
                     outmat = np.vstack((outmat, [timestamp, self.low]))
                     outmat = np.vstack((outmat, [timestamp2, self.low]))
                 lastBit = bit
+                i += 1
 
         elif self.sigtype == 'pulse_nonoverlap':
             self.duty = self.duty - (self.trise+self.tfall+self.nonoverlap_period/2) * self.sig_freq
@@ -353,7 +363,6 @@ if __name__=="__main__":
     coherent=True
 
     sigtypes=['sine', 'sine_samp', 'sawtooth', 'pulse']
-    sigtypes = ['prbs']
     sigtypes = ['pulse_nonoverlap']
 
     duts=[signal_generator() for i in range(len(sigtypes)) ]
