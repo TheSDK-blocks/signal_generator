@@ -225,11 +225,11 @@ class signal_generator(thesdk):
             # Jitter
             if self.jitter_sd:
                 self.print_log(type='I', msg='Applying jitter with SD of %.3g to the output signal!' % self.jitter_sd)
-                jitter = np.random.normal(0,self.jitter_sd, 2*(self.nsamp+self.extra_sampl))
+                jitter = np.random.normal(0,self.jitter_sd, len(prbs_seq))
                 if jitter[0] < 0 and abs(jitter[0] > self.after):
                     self.print_log(type='W', msg='First jitter sample makes first timestamp of the signal negative!')
             else:
-                jitter = np.zeros(2*(self.nsamp+self.extra_sampl))
+                jitter = np.zeros(len(prbs_seq))
             
             # Making a pulse according to PRBS
             lastBit = 0
@@ -238,10 +238,10 @@ class signal_generator(thesdk):
             for bit in prbs_seq:
                 diff = bit - lastBit
                 if bit == 1 and diff == 0:
-                    timestamp = outmat[-1][0] + self.duty/self.sig_freq + jitter[i]
+                    timestamp = outmat[-1][0] + self.duty/self.sig_freq
                     outmat = np.vstack((outmat,[timestamp, self.high]))
                 elif bit == 0 and diff == 0:
-                    timestamp = outmat[-1][0] + self.duty/self.sig_freq + jitter[i]
+                    timestamp = outmat[-1][0] + self.duty/self.sig_freq
                     outmat = np.vstack((outmat,[timestamp, self.low]))
                 elif bit == 1 and diff == 1:
                     timestamp = outmat[-1][0] + self.trise  + jitter[i]
