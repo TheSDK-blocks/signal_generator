@@ -84,7 +84,8 @@ class signal_generator(thesdk):
     def _classfile(self):
         return os.path.dirname(os.path.realpath(__file__)) + "/"+__name__
 
-    def __init__(self,*arg): 
+    def __init__(self,*arg,supress_output=False): 
+        self.supress_output=supress_output
         self.print_log(type='I', msg='Initializing %s' %(__name__)) 
         self.proplist = ['sig_freq','lo_freq','sig_amp','sig_cm','coherent','tau','sig_phase','sig_osr','nsamp','fs','extra_sampl', 'nonoverlap_period']
         self.sig_freq = 1e6
