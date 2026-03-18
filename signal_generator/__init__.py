@@ -262,13 +262,28 @@ class signal_generator(thesdk):
 
         self.IOS.Members['out'].Data=outmat
 
+    def is_prime(self,n):
+        if n % 2 == 0 and n > 2: 
+            return False
+        return all(n % i for i in range(3, int(np.sqrt(n)) + 1, 2))
+
     def get_coherent_fin(self,fs,fin,nsamp):
-        f_base = 1/nsamp
-        fin_norm = fin/fs
-        multiplier = int(round(fin_norm/f_base))
-        f_coherent = multiplier * f_base * fs
-        self.print_log(type='I',msg='Coherence set as: %g Hz -> %g Hz.' % (fin,f_coherent))
-        return f_coherent
+        success = False
+        maxprime = 2**5
+        while not success:
+            try:
+                a = np.arange(1, maxprime)
+                foo = np.vectorize(self.is_prime)
+                pbools = foo(a)
+                primes = np.extract(pbools, a)
+                window = np.floor(nsamp*fin/fs);
+                window = primes[np.where(primes >= window)[0][0]];
+                ratio = window/nsamp;
+                success = True
+            except:
+                maxprime *= 2
+        self.print_log(type='I',msg='Coherence set as: %g Hz -> %g Hz.' % (fin,ratio*fs))
+        return ratio*fs
 
     def phase_from_delay(self):
         phase=-360*self.sig_freq*self.tau
